@@ -25,6 +25,11 @@ namespace ZipImportHook
             get { return "Zip Import hook"; }
         }
 
+        public string ShortName
+        {
+            get { return "zip"; }
+        }
+
         public string Description
         {
             get { return "Hook zip importer to control module loading"; }

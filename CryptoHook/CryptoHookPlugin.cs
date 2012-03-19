@@ -34,6 +34,11 @@ namespace CryptoHook
             get { return "Crypto Hook"; }
         }
 
+        public string ShortName
+        {
+            get { return "cryptoHook"; }
+        }
+
         public string Description
         {
             get { return "Hooks crypto APIs used by the game for packet logging"; }

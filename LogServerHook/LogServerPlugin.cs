@@ -24,6 +24,11 @@ namespace LogServerHook
             get { return "Log Server Hook"; }
         }
 
+        public string ShortName
+        {
+            get { return "logServer"; }
+        }
+
         public string Description
         {
             get { return "Collects log data that normally goes to the log server"; }

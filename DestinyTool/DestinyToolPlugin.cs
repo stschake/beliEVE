@@ -12,6 +12,11 @@ namespace DestinyTool
 
         public string Name
         {
+            get { return "Destiny Helper"; }
+        }
+
+        public string ShortName
+        {
             get { return "destiny"; }
         }
 

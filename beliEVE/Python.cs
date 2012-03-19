@@ -72,7 +72,7 @@ namespace beliEVE
         public static bool RunSupport { get { return _pyCompileStringFlagsOff != 0; } }
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, EntryPoint = "PyImport_ImportModule")]
-        public static extern IntPtr ImportModule([MarshalAs(UnmanagedType.LPStr)] string module);
+        private static extern IntPtr ImportModule([MarshalAs(UnmanagedType.LPStr)] string module);
 
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl, EntryPoint = "PyModule_GetDict")]
         public static extern IntPtr GetModuleDict(IntPtr module);
@@ -150,6 +150,19 @@ namespace beliEVE
                 if (_verboseFlag != IntPtr.Zero)
                     Marshal.WriteInt32(_verboseFlag, value ? 1 : 0);
             }
+        }
+
+        public static IntPtr ImportRaw(string module)
+        {
+            return ImportModule(module);
+        }
+        
+        public static PyObject Import(string module)
+        {
+            var p = ImportRaw(module);
+            if (p == IntPtr.Zero)
+                return null;
+            return new PyObject(p);
         }
 
         public static bool ErrorSet

@@ -95,9 +95,9 @@ namespace beliEVEConsole
 
                 foreach (var plugin in Core.Plugins)
                 {
-                    if (command.StartsWith(plugin.Name))
+                    if (command.StartsWith(plugin.ShortName))
                     {
-                        command = command.Substring(plugin.Name.Length + 1);
+                        command = command.Substring(plugin.ShortName.Length + 1);
                         plugin.ProcessCommand(command);
                         break;
                     }

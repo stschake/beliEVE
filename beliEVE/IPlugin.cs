@@ -4,6 +4,7 @@
     public interface IPlugin
     {
         string Name { get; }
+        string ShortName { get; }
         string Description { get; }
         int Revision { get; }
         PluginType Type { get; }

@@ -59,7 +59,7 @@ namespace beliEVE
         private static extern IntPtr PyObject_Call(IntPtr obj, IntPtr args, IntPtr kw);
         
         public IntPtr Pointer { get; protected set; }
-        public int References { get { return Marshal.ReadInt32(Pointer); } }
+        public int References { get { return IsInvalid ? 0 : Marshal.ReadInt32(Pointer); } }
         public ReferenceType ReferenceType { get; private set; }
 
         public PyObject(IntPtr ptr)
@@ -75,7 +75,7 @@ namespace beliEVE
 
         ~PyObject()
         {
-            if (ReferenceType == ReferenceType.New)
+            if (IsValid && ReferenceType == ReferenceType.New)
                 DecRef();
         }
 
@@ -171,6 +171,7 @@ namespace beliEVE
             }
         }
 
+        public bool IsValid { get { return !IsInvalid; } }
         public bool IsInvalid { get { return Pointer == IntPtr.Zero; } }
         public bool IsCallable { get { return !IsInvalid && PyCallable_Check(Pointer) == 1; } }
         public bool IsTrue { get { return !IsInvalid && PyObject_IsTrue(Pointer) == 1; } }
@@ -254,7 +255,7 @@ namespace beliEVE
             return PyObject_GetAttrString(Pointer, name);
         }
 
-        public int Size { get { return PyObject_Length(Pointer); } }
+        public int Size { get { return IsValid ? PyObject_Length(Pointer) : -1; } }
         public int Count { get { return Size; } }
         public int Length { get { return Size; } }
 

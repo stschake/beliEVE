@@ -84,12 +84,48 @@ namespace DestinyTool
             return ret;
         }
 
+        private static string GetBinaryRepr(byte b)
+        {
+            string ret = "";
+            for (int i = 0; i < 8; i++)
+            {
+                if ((b & (1 << (7 - i))) != 0)
+                    ret += "1";
+                else
+                    ret += "0";
+            }
+            return ret + "b";
+        }
+
+        private static string DataHints(byte[] buf)
+        {
+            if (buf.Length == 1)
+                return "binary: " + GetBinaryRepr(buf[0]) + " uint8: " + buf[0] + " int8: " + (sbyte)buf[0];
+            if (buf.Length == 2)
+            {
+                return "int16: " + BitConverter.ToInt16(buf, 0) + " uint16: " + BitConverter.ToUInt16(buf, 0) +
+                       "\r\n[0] = " + GetBinaryRepr(buf[0]) + " [1] = " + GetBinaryRepr(buf[1]);
+            }
+            if (buf.Length == 4)
+            {
+                return "int32: " + BitConverter.ToInt32(buf, 0) + " uint32: " + BitConverter.ToUInt32(buf, 0) +
+                       " float: " + BitConverter.ToSingle(buf, 0);
+            }
+            if (buf.Length == 8)
+            {
+                return "int64: " + BitConverter.ToInt64(buf, 0) + "\r\nuint64: " + BitConverter.ToUInt64(buf, 0) +
+                       "\r\ndouble: " + BitConverter.ToDouble(buf, 0);
+            }
+            return "";
+        }
+
         private static int HandleRead(IntPtr stream, IntPtr buffer, int size)
         {
             var ret = (int) _memStreamReadDetour.CallOriginal(stream, buffer, size);
             var buf = new byte[ret];
             Marshal.Copy(buffer, buf, 0, ret);
-            Core.Log(LogSeverity.Minor, "read " + size + ", got " + ret + ":\r\n" + Utility.HexDump(buf));
+            var hints = DataHints(buf);
+            Core.Log(LogSeverity.Minor, "read " + size + ", got " + ret + ":\r\n" + Utility.HexDump(buf) + (hints.Length > 0 ? "\r\n"+hints : ""));
             return ret;
         }
     }
