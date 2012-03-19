@@ -11,8 +11,11 @@ namespace CryptoHook
     public class CryptoHookPlugin : IPlugin
     {
         private readonly List<Delegate> _keep = new List<Delegate>(3);
-        private BinaryWriter _encFile;
-        private BinaryWriter _decFile;
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate bool CryptVerifySignature(
+            IntPtr hash, IntPtr signature, int sigLen, IntPtr pubKey, IntPtr description, int flags);
+        private static Detour _cryptVerifyDetour;
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate bool CryptEncryptDelegate(
@@ -53,18 +56,29 @@ namespace CryptoHook
 
         public bool Initialize(LaunchStage stage)
         {
-            return true;
+            if (stage == LaunchStage.PreBlue)
+            {
+                _cryptVerifyDetour = DetourAPI<CryptVerifySignature>("advapi32.dll", "CryptVerifySignatureA",
+                                                                     HandleVerify);
+                if (_cryptVerifyDetour != null)
+                    Core.Log(LogSeverity.Minor, "disabled all crypto verification");
+            }
+
             if (stage == LaunchStage.PostBlue)
             {
-                _encFile = new BinaryWriter(File.Create("encrypted.log"));
-                _decFile = new BinaryWriter(File.Create("decrypted.log"));
-
                 // Encryption & Decryption
                 _cryptEncryptDetour = DetourAPI<CryptEncryptDelegate>("advapi32.dll", "CryptEncrypt", HandleCryptEncrypt);
                 _cryptDecryptDetour = DetourAPI<CryptDecryptDelegate>("advapi32.dll", "CryptDecrypt", HandleCryptDecrypt);
                 Core.Log(LogSeverity.Minor, "CryptoHook active");
             }
 
+            return true;
+        }
+
+        private bool HandleVerify(IntPtr hash, IntPtr signature, int siglen, IntPtr pubkey, IntPtr description, int flags)
+        {
+            // we need to call the original, it might do important stuff
+            var ret = _cryptVerifyDetour.CallOriginal(hash, signature, siglen, pubkey, description, flags);
             return true;
         }
 
@@ -80,10 +94,6 @@ namespace CryptoHook
             {
                 var dataBuffer = new byte[length];
                 Marshal.Copy(pbData, dataBuffer, 0, length);
-
-                _encFile.Write(Utility.HexDump(dataBuffer));
-                _encFile.Write("\r\n");
-                _encFile.Flush();
             }
 
             return (bool)_cryptEncryptDetour.CallOriginal(hKey, hHash, final, dwFlags, pbData, pdwLength, dwBufLen);
@@ -105,10 +115,6 @@ namespace CryptoHook
 
             if (dataBuffer[0] == 0x78)
                 dataBuffer = Utility.Decompress(dataBuffer);
-
-            _decFile.Write(Utility.HexDump(dataBuffer));
-            _decFile.Write("\r\n");
-            _decFile.Flush();
 
             return true;
         }
