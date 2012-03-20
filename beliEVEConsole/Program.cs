@@ -5,22 +5,23 @@ using beliEVE;
 
 namespace beliEVEConsole
 {
-    class TestModule : NativeModule
+    class ConsoleModule : NativeModule
     {
-        public TestModule()
-            : base("MyTestModule")
+        public ConsoleModule()
+            : base("bEconsole")
         {
-            AddMethod("Test", HandleTest);
+            AddMethod("Log", HandleLog);
             Initialize();
         }
 
-        private IntPtr HandleTest(IntPtr self, IntPtr args)
+        private IntPtr HandleLog(IntPtr self, IntPtr args)
         {
-            Core.Log(LogSeverity.Minor, "In HandleTest");
             var tup = new PyTuple(args);
-            foreach (var obj in tup)
-                Core.Log(LogSeverity.Minor, "arg: " + obj);
-            return new PyInt(1).Pointer;
+            if (tup.IsInvalid || !tup.IsTuple || tup.Size <= 0)
+                return PyObject.None;
+            var obj = tup[0];
+            Core.Log(LogSeverity.Minor, obj.ToString());
+            return PyObject.None;
         }
     }
 
@@ -52,6 +53,8 @@ namespace beliEVEConsole
             Python.Initialize();
             Core.Plugins.Initialize(LaunchStage.PostBlue);
 
+            var console = new ConsoleModule();
+
             Core.Log(LogSeverity.Minor, "Leaving main thread, switching to command processor");
             var thread = new Thread(CommandProcessor);
             thread.Start();
@@ -78,7 +81,10 @@ namespace beliEVEConsole
                     code.Append(command + "\n");
                     Console.Write("      ");
                     while ((command = Console.ReadLine()) != "")
+                    {
+                        Console.Write("      ");
                         code.Append(command.Replace(@"\t", "\t") + "\n");
+                    }
                     var cb = new CodeBite(code.ToString());
                     try
                     {
