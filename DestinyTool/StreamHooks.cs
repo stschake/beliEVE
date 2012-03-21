@@ -116,6 +116,13 @@ namespace DestinyTool
                 return "int64: " + BitConverter.ToInt64(buf, 0) + "\r\nuint64: " + BitConverter.ToUInt64(buf, 0) +
                        "\r\ndouble: " + BitConverter.ToDouble(buf, 0);
             }
+            if (buf.Length == 24)
+            {
+                var x = BitConverter.ToDouble(buf, 0);
+                var y = BitConverter.ToDouble(buf, 8);
+                var z = BitConverter.ToDouble(buf, 16);
+                return "Vector3 X: " + x + "\r\nVector3 Y: " + y + "\r\nVector3 Z: " + z;
+            }
             return "";
         }
 
