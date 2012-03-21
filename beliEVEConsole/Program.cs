@@ -78,6 +78,8 @@ namespace beliEVEConsole
                 {
                     var code = new StringBuilder(200);
                     command = command.Substring(4);
+                    // import this by default to enable logging
+                    code.Append("import bE\n");
                     code.Append(command + "\n");
                     Console.Write("      ");
                     while ((command = Console.ReadLine()) != "")
@@ -91,6 +93,11 @@ namespace beliEVEConsole
                         var res = Python.Repr(cb.Run());
                         if (res != "0" && res != "None")
                             Console.WriteLine(" => " + res);
+                    }
+                    catch (PyException py)
+                    {
+                        Console.WriteLine(" => runtime error: " + py.Type + ": " + py.Value);
+                        continue;
                     }
                     catch (CompileException)
                     {

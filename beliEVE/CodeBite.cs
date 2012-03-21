@@ -67,7 +67,7 @@ namespace beliEVE
 
                 if (Python.ErrorSet)
                 {
-                    Python.PrintError();
+                    _exception = Python.GetError();
                     Python.ClearError();
                 }
                 return 0;

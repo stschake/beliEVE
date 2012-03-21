@@ -72,7 +72,10 @@ namespace beliEVE
 
         internal static byte[] GetRawInternal(IntPtr pointer)
         {
-            var ret = new byte[PyString_Size(pointer)];
+            int sz = PyString_Size(pointer);
+            if (sz < 0)
+                return null;
+            var ret = new byte[sz];
             var buffer = PyString_AsString(pointer);
             Marshal.Copy(buffer, ret, 0, ret.Length);
             return ret;
@@ -81,7 +84,12 @@ namespace beliEVE
         internal static string GetValueInternal(IntPtr pointer)
         {
             if (PyObject_IsInstance(pointer, Python.Type.Unicode) == 0)
-                return Encoding.ASCII.GetString(GetRawInternal(pointer));
+            {
+                var raw = GetRawInternal(pointer);
+                if (raw == null)
+                    return "";
+                return Encoding.ASCII.GetString(raw);
+            }
 
             var mem = PyUnicodeUCS2_AsEncodedString(pointer, "utf-8", "ignore");
             if (mem == IntPtr.Zero)

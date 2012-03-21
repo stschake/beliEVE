@@ -98,6 +98,12 @@ namespace beliEVE
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr PyErr_Print();
 
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void PyErr_Fetch(out IntPtr type, out IntPtr value, out IntPtr traceback);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void PyErr_Restore(IntPtr type, IntPtr value, IntPtr traceback);
+
         [DllImport(DLL, CallingConvention = CallingConvention.Cdecl, EntryPoint = "Py_IsInitialized")]
         public static extern bool IsInitialized();
 
@@ -171,6 +177,17 @@ namespace beliEVE
             {
                 return PyErr_Occurred() != IntPtr.Zero;
             }
+        }
+
+        public static PyException GetError()
+        {
+            if (!ErrorSet)
+                return null;
+
+            IntPtr type, value, traceback;
+            PyErr_Fetch(out type, out value, out traceback);
+            PyErr_Restore(type, value, traceback);
+            return new PyException(type, value, traceback);
         }
 
         public static IntPtr InitModule(string name, PyMethodDef[] methods)
