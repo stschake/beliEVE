@@ -8,7 +8,7 @@ namespace beliEVEConsole
     class ConsoleModule : NativeModule
     {
         public ConsoleModule()
-            : base("bEconsole")
+            : base("bE")
         {
             AddMethod("Log", HandleLog);
             Initialize();

@@ -68,8 +68,13 @@ namespace beliEVE
             {
                 // this is necessary to initialize some internal memory, ugh
                 var getBePaths = Native.GetProcAddress(Library, "GetBePaths");
-                _getBePaths = Utility.Magic.RegisterDelegate<GetBePaths>(getBePaths);
-                _getBePaths(BeOS);
+                if (getBePaths != IntPtr.Zero)
+                {
+                    _getBePaths = Utility.Magic.RegisterDelegate<GetBePaths>(getBePaths);
+                    _getBePaths(BeOS);
+                }
+                else
+                    Core.Log(LogSeverity.Warning, "no GetBePaths found in blue.dll, skipping (fatal on Cru)");
             }
 
             func = Utility.Magic.GetObjectVtableFunction(BeOS, 7);
