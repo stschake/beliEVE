@@ -60,7 +60,7 @@ namespace beliEVE
         
         public IntPtr Pointer { get; protected set; }
         public int References { get { return IsInvalid ? 0 : Marshal.ReadInt32(Pointer); } }
-        public ReferenceType ReferenceType { get; private set; }
+        public ReferenceType ReferenceType { get; internal set; }
 
         public PyObject(IntPtr ptr)
             : this(ptr, ReferenceType.New)
@@ -87,7 +87,7 @@ namespace beliEVE
             var ret =
                 PyObject_Call(Pointer, args != null ? args.Pointer : IntPtr.Zero,
                               kws != null ? kws.Pointer : IntPtr.Zero);
-            return new PyObject(ret);
+            return GetSpecialized(ret);
         }
 
         public PyObject Call(params PyObject[] args)
@@ -119,7 +119,9 @@ namespace beliEVE
                 if (k == IntPtr.Zero)
                     return null;
                 var ret = PyObject_GetItem(Pointer, k);
-                return new PyObject(ret, ReferenceType.Borrowed);
+                var obj = GetSpecialized(ret);
+                obj.ReferenceType = ReferenceType.Borrowed;
+                return obj;
             }
             set
             {
@@ -141,7 +143,9 @@ namespace beliEVE
                     return null;
                 var k = PyInt.PyInt_FromLong(key);
                 var ret = PyObject_GetItem(Pointer, k);
-                return new PyObject(ret, ReferenceType.Borrowed);
+                var obj = GetSpecialized(ret);
+                obj.ReferenceType = ReferenceType.Borrowed;
+                return obj;
             }
             set
             {
@@ -159,7 +163,12 @@ namespace beliEVE
             {
                 if (IsInvalid || key.IsInvalid)
                     return null;
-                return new PyObject(PyObject_GetItem(Pointer, key.Pointer), ReferenceType.Borrowed);
+                var ptr = PyObject_GetItem(Pointer, key.Pointer);
+                if (ptr == IntPtr.Zero)
+                    return null;
+                var obj = GetSpecialized(ptr);
+                obj.ReferenceType = ReferenceType.Borrowed;
+                return obj;
             }
             set
             {
@@ -213,7 +222,7 @@ namespace beliEVE
             var p = GetAttr(attr);
             if (p == IntPtr.Zero)
                 return null;
-            return new PyObject(p);
+            return GetSpecialized(p);
         }
 
         public int GetInt(string attr)
@@ -230,6 +239,14 @@ namespace beliEVE
             if (p == IntPtr.Zero)
                 return "";
             return PyString.GetValueInternal(p);
+        }
+
+        public byte[] GetRaw(string attr)
+        {
+            var p = GetAttr(attr);
+            if (p == IntPtr.Zero)
+                return null;
+            return PyString.GetRawInternal(p);
         }
 
         public long GetLong(string attr)
@@ -277,18 +294,7 @@ namespace beliEVE
             IntPtr p = PyIter_Next(iter);
             while (p != IntPtr.Zero)
             {
-                PyObject r;
-                if (PyObject_IsInstance(p, Python.Type.String) == 1)
-                    r = new PyString(p);
-                else if (PyObject_IsInstance(p, Python.Type.Int) == 1)
-                    r = new PyInt(p);
-                else if (PyObject_IsInstance(p, Python.Type.Float) == 1)
-                    r = new PyFloat(p);
-                else if (PyObject_IsInstance(p, Python.Type.Long) == 1)
-                    r = new PyLong(p);
-                else
-                    r = new PyObject(p);
-                yield return r;
+                yield return GetSpecialized(p);
 
                 p = PyIter_Next(iter);
             }
@@ -371,10 +377,20 @@ namespace beliEVE
 
         public override bool Equals(object obj)
         {
-            if (obj == null || GetType() != obj.GetType())
+            if (obj == null || (!obj.GetType().IsSubclassOf(GetType()) && GetType() != obj.GetType()))
                 return false;
 
             return PyObject_RichCompareBool(Pointer, ((PyObject) obj).Pointer, CompareOp.Equal) == 1;
+        }
+
+        public bool IsNone
+        {
+            get
+            {
+                if (_none == IntPtr.Zero)
+                    _none = Native.GetProcAddress(Python.Library, "_Py_NoneStruct");
+                return Pointer == _none;
+            }
         }
 
         private static IntPtr _none;
@@ -401,18 +417,6 @@ namespace beliEVE
             }
         }
 
-        private static IntPtr _true;
-        public static IntPtr True
-        {
-            get
-            {
-                if (_true == IntPtr.Zero)
-                    _true = Native.GetProcAddress(Python.Library, "_Py_TrueStruct");
-                Python.Py_IncRef(_true);
-                return _true;
-            }
-        }
-
         private static IntPtr _notImplemented;
         public static IntPtr NotImplemented
         {
@@ -425,6 +429,29 @@ namespace beliEVE
             }
         }
 
+        internal static PyObject GetSpecialized(IntPtr obj)
+        {
+            if (PyObject_IsInstance(obj, Python.Type.String) == 1
+                || PyObject_IsInstance(obj, Python.Type.Unicode) == 1)
+                return new PyString(obj);
+            if (PyObject_IsInstance(obj, Python.Type.Tuple) == 1)
+                return new PyTuple(obj);
+            if (PyObject_IsInstance(obj, Python.Type.Float) == 1)
+                return new PyFloat(obj);
+            if (PyObject_IsInstance(obj, Python.Type.Int) == 1)
+                return new PyInt(obj);
+            if (PyObject_IsInstance(obj, Python.Type.Dict) == 1)
+                return new PyDict(obj);
+            if (PyObject_IsInstance(obj, Python.Type.List) == 1)
+                return new PyList(obj);
+            if (PyObject_IsInstance(obj, Python.Type.Long) == 1)
+                return new PyLong(obj);
+            if (PyObject_IsInstance(obj, Python.Type.Bool) == 1)
+                return new PyBool(obj);
+
+            // no specialized type available
+            return new PyObject(obj);
+        }
     }
 
 }
